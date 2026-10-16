@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Nayah Allure | Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>tailwind.config={theme:{extend:{colors:{gold:{DEFAULT:'#D4AF37',dark:'#AA7C11'},charcoal:'#121212',darkgray:'#1C1C1C'}}}};</script>
+<style>
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0d;color:#f3f3f3}
+.field{width:100%;background:#0d0d0d;border:1px solid #333;border-radius:.375rem;padding:.5rem .7rem;font-size:.875rem;color:#f3f3f3}
+.field:focus{outline:none;border-color:#D4AF37}
+.btn{background:#D4AF37;color:#000;font-weight:700;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem}
+.btn:hover{filter:brightness(1.1)}
+.btn-o{border:1px solid #D4AF37;color:#D4AF37;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem}
+.btn-o:hover{background:rgba(212,175,55,.1)}
+:focus-visible{outline:2px solid #D4AF37;outline-offset:2px}
+</style>
+</head>
+<body>
+<!-- LOGIN -->
+<main id="login" class="min-h-screen flex items-center justify-center p-4">
+  <form id="loginForm" class="w-full max-w-sm bg-darkgray border border-gold/30 rounded-xl p-8 space-y-4" autocomplete="on">
+    <h1 class="text-xl font-bold text-gold text-center tracking-widest">NAYAH ALLURE ADMIN</h1>
+    <div><label for="u" class="text-xs text-gray-400">Username</label><input id="u" class="field" required autocomplete="username"></div>
+    <div><label for="p" class="text-xs text-gray-400">Password</label><input id="p" type="password" class="field" required autocomplete="current-password"></div>
+    <p id="err" class="text-red-400 text-xs min-h-[1rem]" role="alert"></p>
+    <button class="btn w-full" type="submit">Sign in</button>
+    <a href="index.html" class="block text-center text-xs text-gray-500 hover:text-gold">← Back to website</a>
+  </form>
+</main>
+
+<!-- DASHBOARD -->
+<div id="app" hidden>
+  <header class="bg-black border-b border-gold/20 sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <span class="font-bold text-gold tracking-widest">ADMIN</span>
+      <div class="flex gap-2"><a href="index.html" target="_blank" class="btn-o">View site</a><button id="logout" class="btn-o" type="button">Log out</button></div>
+    </div>
+  </header>
+  <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
+    <div class="bg-darkgray border border-gold/20 rounded-lg p-4 text-sm text-gray-300">
+      Edits are saved as a <strong class="text-gold">draft in this browser</strong>. To publish, click <strong class="text-gold">Download catalog.json</strong> and upload it over the existing file on your web host.
+      <span id="dirty" class="ml-2 text-amber-400" hidden>● Unpublished changes</span>
+    </div>
+
+    <section>
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-bold text-gold">Products</h2>
+        <div class="flex gap-2"><button id="addProduct" class="btn" type="button">+ Add product</button></div>
+      </div>
+      <div class="overflow-x-auto border border-gray-800 rounded-lg">
+        <table class="w-full text-sm min-w-[640px]">
+          <thead class="bg-black text-gray-400 text-xs uppercase"><tr><th class="p-3 text-left">Name</th><th class="p-3 text-left">Category</th><th class="p-3 text-left w-32">Price (KSh)</th><th class="p-3">Visible</th><th class="p-3"></th></tr></thead>
+          <tbody id="products" class="divide-y divide-gray-800"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-bold text-gold mb-4">Service prices</h2>
+      <div id="services" class="grid md:grid-cols-3 gap-4"></div>
+    </section>
+
+    <section class="flex flex-wrap gap-3">
+      <button id="download" class="btn" type="button"><i class="fas fa-download mr-1" aria-hidden="true"></i> Download catalog.json</button>
+      <button id="reset" class="btn-o" type="button">Discard draft</button>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+/* Credentials: only a salted PBKDF2 hash is stored here, never the password.
+   NOTE: this is a client-side gate. It keeps casual visitors out, but real security
+   needs a server. See the README notes in the chat. */
+const AUTH = {
+  user: 'nayah_admin',
+  salt: '69cd01d18315213cd5a4b82aac204bf7',
+  hash: '39a330dc2f362e15b34175572508cb8bdaca9149e7acf432cd4d680d5117528b',
+  iterations: 200000,
+  sessionMs: 30 * 60 * 1000,
+  maxAttempts: 5,
+  lockMs: 15 * 60 * 1000
+};
+const K = { sess: 'na-admin-session', fail: 'na-admin-fails', draft: 'na-admin-draft' };
+const $ = s => document.querySelector(s);
+const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+const unhex = h => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
+const store = {
+  get: (s, k) => { try { return JSON.parse(s.getItem(k)); } catch { return null; } },
+  set: (s, k, v) => { try { s.setItem(k, JSON.stringify(v)); } catch {} },
+  del: (s, k) => { try { s.removeItem(k); } catch {} }
+};
+
+async function derive(pw) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unhex(AUTH.salt), iterations: AUTH.iterations }, key, 256));
+}
+function safeEqual(a, b) { let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
+
+const hasSession = () => { const s = store.get(sessionStorage, K.sess); return !!s && s.exp > Date.now(); };
+function lockRemaining() { const f = store.get(localStorage, K.fail); return f && f.until > Date.now() ? f.until - Date.now() : 0; }
+
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#err');
+  if (!window.crypto?.subtle) { err.textContent = 'Secure context required. Open the site over HTTPS.'; return; }
+  const left = lockRemaining();
+  if (left) { err.textContent = `Too many attempts. Try again in ${Math.ceil(left / 60000)} min.`; return; }
+  const okUser = safeEqual($('#u').value.trim(), AUTH.user);
+  const okPass = safeEqual(await derive($('#p').value), AUTH.hash);
+  if (okUser && okPass) {
+    store.del(localStorage, K.fail);
+    store.set(sessionStorage, K.sess, { exp: Date.now() + AUTH.sessionMs });
+    $('#p').value = ''; err.textContent = ''; showApp();
+  } else {
+    const f = store.get(localStorage, K.fail) || { n: 0 };
+    f.n = (f.n || 0) + 1;
+    if (f.n >= AUTH.maxAttempts) { f.until = Date.now() + AUTH.lockMs; f.n = 0; }
+    store.set(localStorage, K.fail, f);
+    err.textContent = 'Invalid username or password.';
+  }
+});
+
+/* ---------- Dashboard ---------- */
+let data = null, original = null;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadData() {
+  const r = await fetch('catalog.json', { cache: 'no-cache' });
+  original = await r.json();
+  data = store.get(localStorage, K.draft) || structuredClone(original);
+}
+function markDirty() {
+  store.set(localStorage, K.draft, data);
+  $('#dirty').hidden = JSON.stringify(data) === JSON.stringify(original);
+}
+function render() {
+  $('#products').innerHTML = data.products.map((p, i) => `
+    <tr>
+      <td class="p-2"><input class="field" data-i="${i}" data-f="name" value="${esc(p.name)}" aria-label="Name"></td>
+      <td class="p-2"><input class="field" data-i="${i}" data-f="cat" value="${esc(p.cat)}" aria-label="Category" list="cats"></td>
+      <td class="p-2"><input class="field" type="number" min="0" step="50" data-i="${i}" data-f="price" value="${p.price}" aria-label="Price"></td>
+      <td class="p-2 text-center"><input type="checkbox" data-i="${i}" data-f="active" ${p.active !== false ? 'checked' : ''} aria-label="Visible"></td>
+      <td class="p-2 text-right"><button type="button" class="text-red-400 text-xs hover:underline" data-del="${i}">Delete</button></td>
+    </tr>`).join('') + `<datalist id="cats">${[...new Set(data.products.map(p => p.cat))].map(c => `<option value="${esc(c)}">`).join('')}</datalist>`;
+  $('#services').innerHTML = data.services.map((s, si) => `
+    <div class="bg-darkgray border border-gold/20 rounded-lg p-4 space-y-3">
+      <h3 class="font-semibold text-gold">${esc(s.name)}</h3>
+      ${s.items.map((it, ii) => `<label class="block text-xs text-gray-400">${esc(it[0])}<input class="field mt-1" type="number" min="0" step="50" data-s="${si}" data-it="${ii}" value="${it[1]}"></label>`).join('')}
+    </div>`).join('');
+  markDirty();
+}
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.f) {
+    const p = data.products[t.dataset.i], f = t.dataset.f;
+    p[f] = f === 'active' ? t.checked : f === 'price' ? Math.max(0, Number(t.value) || 0) : t.value;
+    markDirty();
+  } else if (t.dataset.s) {
+    data.services[t.dataset.s].items[t.dataset.it][1] = Math.max(0, Number(t.value) || 0);
+    markDirty();
+  }
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.del !== undefined && confirm('Delete this product?')) { data.products.splice(t.dataset.del, 1); render(); }
+  if (t.id === 'addProduct') { data.products.push({ id: 'p' + Date.now().toString(36), cat: 'Jewelry', name: 'New product', price: 0, icon: 'fa-gem', active: true }); render(); }
+  if (t.id === 'reset' && confirm('Discard all unpublished changes?')) { store.del(localStorage, K.draft); data = structuredClone(original); render(); }
+  if (t.id === 'logout') logout();
+  if (t.id === 'download') {
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })), download: 'catalog.json' });
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+});
+
+function logout() { store.del(sessionStorage, K.sess); location.reload(); }
+async function showApp() {
+  $('#login').hidden = true; $('#app').hidden = false;
+  try { await loadData(); render(); } catch (e) { console.error(e); alert('Could not load catalog.json. Serve this folder over http(s).'); }
+  setTimeout(logout, Math.max(0, store.get(sessionStorage, K.sess).exp - Date.now()));
+}
+if (hasSession()) showApp();
+})();
+</script>
+</body>
+</html>
