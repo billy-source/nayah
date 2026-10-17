@@ -53,6 +53,7 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
       <a href="#contact" class="text-gray-300 hover:text-gold">Contact</a>
     </div>
     <div class="flex items-center gap-2">
+      <a href="admin.html" class="text-gold text-xs uppercase tracking-wider border border-gold/40 rounded px-3 py-1.5 hover:bg-gold hover:text-black transition" aria-label="Admin login"><i class="fas fa-user-shield sm:mr-1" aria-hidden="true"></i><span class="hidden sm:inline">Admin</span></a>
       <button type="button" data-action="toggle-cart" class="relative p-2 text-gold hover:text-white" aria-label="Open cart">
         <i class="fas fa-shopping-bag text-2xl" aria-hidden="true"></i>
         <span id="cartCount" class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
@@ -132,7 +133,7 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
   </section>
 </main>
 
-<footer class="bg-black border-t border-gold/20 py-8 text-center text-xs text-gray-500">&copy; <span id="year"></span> Nayah Allure. All rights reserved.</footer>
+<footer class="bg-black border-t border-gold/20 py-8 text-center text-xs text-gray-500">&copy; <span id="year"></span> Nayah Allure. All rights reserved. <a href="admin.html" class="ml-3 hover:text-gold">Admin</a></footer>
 
 <div id="cartOverlay" hidden class="fixed inset-0 bg-black/70 z-50" data-action="toggle-cart"></div>
 <aside id="cartDrawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-darkgray z-[60] border-l border-gold/30 flex flex-col translate-x-full transition-transform duration-300" aria-label="Shopping cart" inert>
@@ -168,6 +169,24 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
 <script>
 (() => {
 'use strict';
+const DEFAULTS = {
+  services: [
+    { id: 'lashes', name: 'Lash Extensions', img: 'https://images.unsplash.com/photo-1583001809873-a1284d563371?auto=format&fit=crop&w=800&q=80', desc: 'Classic, Hybrid and Volume extensions tailored to your eye shape.', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
+    { id: 'wigs', name: 'Wig Installation & Styling', img: 'https://images.unsplash.com/photo-1562088287-bde35a1ad921?auto=format&fit=crop&w=800&q=80', desc: 'Seamless lace melts, knot bleaching, precision cutting and styling.', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
+    { id: 'waxing', name: 'Waxing', img: 'https://images.unsplash.com/photo-1519824145371-296894a0daa9?auto=format&fit=crop&w=800&q=80', desc: 'Gentle, hygienic waxing for silky smooth skin.', items: [['Eyebrow Wax & Shape', 500], ['Underarm Wax', 700], ['Full Leg Wax', 2000]] }
+  ],
+  products: [
+    { id: 'p1', cat: 'Jewelry', name: 'Gold Hoop Earrings', price: 1200, icon: 'fa-gem', img: '', active: true },
+    { id: 'p2', cat: 'Jewelry', name: 'Layered Necklace', price: 1800, icon: 'fa-ring', img: '', active: true },
+    { id: 'p3', cat: 'Jewelry', name: 'Charm Bracelet', price: 1500, icon: 'fa-gem', img: '', active: true },
+    { id: 'p4', cat: 'Flowers', name: 'Classic Rose Bouquet', price: 3000, icon: 'fa-spa', img: '', active: true },
+    { id: 'p5', cat: 'Flowers', name: 'Mixed Seasonal Bouquet', price: 2500, icon: 'fa-seedling', img: '', active: true },
+    { id: 'p6', cat: 'Flowers', name: 'Luxury Flower Box', price: 4500, icon: 'fa-spa', img: '', active: true },
+    { id: 'p7', cat: 'Accessories', name: 'Silk Bonnet', price: 900, icon: 'fa-crown', img: '', active: true },
+    { id: 'p8', cat: 'Accessories', name: 'Lash Aftercare Kit', price: 1300, icon: 'fa-eye', img: '', active: true }
+  ]
+};
+const CATALOG_KEY = 'nayah-catalog-v1';
 const CFG = { wa: '254797787798', cur: 'KSh', key: 'nayah-cart-v2' };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -177,6 +196,14 @@ const el = (tag, cls, html = '') => Object.assign(document.createElement(tag), {
 const wa = t => `https://wa.me/${CFG.wa}?text=${encodeURIComponent(t)}`;
 let SERVICES = [], PRODUCTS = [], category = 'All', service = null, timer;
 
+/* Catalog: managed from admin.html, stored in this browser; falls back to DEFAULTS */
+function loadCatalog() {
+  let c = null;
+  try { c = JSON.parse(localStorage.getItem(CATALOG_KEY)); } catch {}
+  if (!c || !Array.isArray(c.products) || !Array.isArray(c.services)) c = DEFAULTS;
+  SERVICES = c.services; PRODUCTS = c.products;
+}
+
 function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(timer); timer = setTimeout(() => t.hidden = true, 2500); }
 const find = id => PRODUCTS.find(p => p.id === id);
 
@@ -185,7 +212,7 @@ const cart = {
   load() { try { JSON.parse(localStorage.getItem(CFG.key) || '[]').forEach(([id, q]) => this.items.set(id, q)); } catch {} },
   save() { try { localStorage.setItem(CFG.key, JSON.stringify([...this.items])); } catch {} },
   change(id, d) { const q = (this.items.get(id) || 0) + d; q > 0 ? this.items.set(id, q) : this.items.delete(id); this.save(); renderCart(); },
-  count() { let n = 0; this.items.forEach(q => n += q); return n; },
+  count() { let n = 0; this.items.forEach((q, id) => { if (find(id)) n += q; }); return n; },
   total() { let s = 0; this.items.forEach((q, id) => { const p = find(id); if (p) s += p.price * q; }); return s; }
 };
 
@@ -204,13 +231,14 @@ function renderServices() {
 function renderShop() {
   const list = PRODUCTS.filter(p => p.active !== false);
   const cats = ['All', ...new Set(list.map(p => p.cat))];
+  if (!cats.includes(category)) category = 'All';
   $('#shopFilters').replaceChildren(...cats.map(c => {
     const b = el('button', `px-5 py-2 rounded-full text-xs uppercase tracking-wider border transition ${c === category ? 'bg-gold text-black border-gold' : 'border-gold/40 text-gold hover:bg-gold/10'}`, esc(c));
     b.type = 'button'; b.dataset.cat = c; b.setAttribute('aria-pressed', c === category); return b;
   }));
   $('#productGrid').replaceChildren(...list.filter(p => category === 'All' || p.cat === category).map(p => {
     const c = el('article', 'card rounded-xl p-5 flex flex-col text-center');
-    c.innerHTML = `<div class="h-32 flex items-center justify-center bg-black/40 rounded-lg mb-4"><i class="fas ${esc(p.icon || 'fa-gem')} text-gold text-4xl" aria-hidden="true"></i></div>
+    c.innerHTML = `<div class="h-40 flex items-center justify-center bg-black/40 rounded-lg mb-4 overflow-hidden">${p.img ? `<img src="${esc(p.img)}" alt="${esc(p.name)}" loading="lazy" class="w-full h-full object-cover">` : `<i class="fas ${esc(p.icon || 'fa-gem')} text-gold text-4xl" aria-hidden="true"></i>`}</div>
       <span class="text-[10px] uppercase tracking-widest text-gray-500">${esc(p.cat)}</span><h3 class="font-heading font-bold text-sm md:text-base my-1">${esc(p.name)}</h3>
       <p class="text-gold font-semibold mb-4">${money(p.price)}</p>
       <button type="button" data-add="${esc(p.id)}" class="mt-auto py-2 border border-gold text-gold text-xs font-bold uppercase tracking-wider rounded hover:bg-gold hover:text-black transition">Add to cart</button>`;
@@ -278,20 +306,11 @@ $('#bookingForm').addEventListener('submit', e => {
   e.target.reset(); closeModals();
 });
 
-async function init() {
-  $('#year').textContent = new Date().getFullYear();
-  cart.load();
-  try {
-    const r = await fetch('catalog.json', { cache: 'no-cache' });
-    if (!r.ok) throw new Error(r.status);
-    ({ services: SERVICES, products: PRODUCTS } = await r.json());
-  } catch (err) {
-    console.error('Catalog failed to load:', err);
-    $('#productGrid').innerHTML = '<p class="col-span-full text-center text-gray-400">Catalog unavailable. Please contact us on WhatsApp.</p>';
-  }
-  renderServices(); renderShop(); renderCart();
-}
-init();
+// Refresh live if the admin edits the catalog in another tab
+window.addEventListener('storage', e => { if (e.key === CATALOG_KEY) { loadCatalog(); renderServices(); renderShop(); renderCart(); } });
+
+$('#year').textContent = new Date().getFullYear();
+cart.load(); loadCatalog(); renderServices(); renderShop(); renderCart();
 })();
 </script>
 </body>

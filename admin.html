@@ -15,15 +15,15 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
 .field:focus{outline:none;border-color:#D4AF37}
 .btn{background:#D4AF37;color:#000;font-weight:700;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem}
 .btn:hover{filter:brightness(1.1)}
-.btn-o{border:1px solid #D4AF37;color:#D4AF37;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem}
+.btn-o{border:1px solid #D4AF37;color:#D4AF37;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem;cursor:pointer;display:inline-block}
 .btn-o:hover{background:rgba(212,175,55,.1)}
+:focus-within.photo{outline:2px solid #D4AF37}
 :focus-visible{outline:2px solid #D4AF37;outline-offset:2px}
 </style>
 </head>
 <body>
-<!-- LOGIN -->
 <main id="login" class="min-h-screen flex items-center justify-center p-4">
-  <form id="loginForm" class="w-full max-w-sm bg-darkgray border border-gold/30 rounded-xl p-8 space-y-4" autocomplete="on">
+  <form id="loginForm" class="w-full max-w-sm bg-darkgray border border-gold/30 rounded-xl p-8 space-y-4">
     <h1 class="text-xl font-bold text-gold text-center tracking-widest">NAYAH ALLURE ADMIN</h1>
     <div><label for="u" class="text-xs text-gray-400">Username</label><input id="u" class="field" required autocomplete="username"></div>
     <div><label for="p" class="text-xs text-gray-400">Password</label><input id="p" type="password" class="field" required autocomplete="current-password"></div>
@@ -33,62 +33,73 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
   </form>
 </main>
 
-<!-- DASHBOARD -->
 <div id="app" hidden>
   <header class="bg-black border-b border-gold/20 sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
       <span class="font-bold text-gold tracking-widest">ADMIN</span>
-      <div class="flex gap-2"><a href="index.html" target="_blank" class="btn-o">View site</a><button id="logout" class="btn-o" type="button">Log out</button></div>
+      <div class="flex items-center gap-3"><span id="status" class="text-xs text-emerald-400" role="status"></span><a href="index.html" target="_blank" class="btn-o">View site</a><button id="logout" class="btn-o" type="button">Log out</button></div>
     </div>
   </header>
   <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
-    <div class="bg-darkgray border border-gold/20 rounded-lg p-4 text-sm text-gray-300">
-      Edits are saved as a <strong class="text-gold">draft in this browser</strong>. To publish, click <strong class="text-gold">Download catalog.json</strong> and upload it over the existing file on your web host.
-      <span id="dirty" class="ml-2 text-amber-400" hidden>● Unpublished changes</span>
-    </div>
-
     <section>
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h2 class="text-lg font-bold text-gold">Products</h2>
-        <div class="flex gap-2"><button id="addProduct" class="btn" type="button">+ Add product</button></div>
-      </div>
-      <div class="overflow-x-auto border border-gray-800 rounded-lg">
-        <table class="w-full text-sm min-w-[640px]">
-          <thead class="bg-black text-gray-400 text-xs uppercase"><tr><th class="p-3 text-left">Name</th><th class="p-3 text-left">Category</th><th class="p-3 text-left w-32">Price (KSh)</th><th class="p-3">Visible</th><th class="p-3"></th></tr></thead>
-          <tbody id="products" class="divide-y divide-gray-800"></tbody>
-        </table>
-      </div>
+      <h2 class="text-lg font-bold text-gold mb-4">Add new item</h2>
+      <form id="addForm" class="bg-darkgray border border-gold/20 rounded-lg p-4 grid md:grid-cols-[160px_1fr] gap-4">
+        <div>
+          <div id="newPreview" class="h-40 bg-black/50 rounded flex items-center justify-center overflow-hidden text-gray-600"><i class="fas fa-image text-3xl" aria-hidden="true"></i></div>
+          <label class="photo btn-o block text-center text-xs mt-2"><i class="fas fa-camera mr-1" aria-hidden="true"></i>Choose photo<input id="newPhoto" type="file" accept="image/*" class="sr-only"></label>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-3 content-start">
+          <label class="sm:col-span-3 text-xs text-gray-400">Item name<input id="newName" class="field mt-1" required maxlength="80" placeholder="e.g. Pearl Drop Earrings"></label>
+          <label class="text-xs text-gray-400">Category<input id="newCat" class="field mt-1" required maxlength="40" list="cats" placeholder="Jewelry"></label>
+          <label class="text-xs text-gray-400">Price (KSh)<input id="newPrice" class="field mt-1" type="number" min="0" step="50" required placeholder="1500"></label>
+          <div class="flex items-end"><button class="btn w-full" type="submit"><i class="fas fa-plus mr-1" aria-hidden="true"></i> Add item</button></div>
+        </div>
+      </form>
     </section>
-
+    <section>
+      <h2 class="text-lg font-bold text-gold mb-4">Items on the site</h2>
+      <div id="products" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
     <section>
       <h2 class="text-lg font-bold text-gold mb-4">Service prices</h2>
       <div id="services" class="grid md:grid-cols-3 gap-4"></div>
     </section>
-
-    <section class="flex flex-wrap gap-3">
-      <button id="download" class="btn" type="button"><i class="fas fa-download mr-1" aria-hidden="true"></i> Download catalog.json</button>
-      <button id="reset" class="btn-o" type="button">Discard draft</button>
-    </section>
+    <section><button id="reset" class="btn-o" type="button">Reset everything to defaults</button></section>
   </main>
 </div>
 
 <script>
 (() => {
 'use strict';
+const DEFAULTS = {
+  services: [
+    { id: 'lashes', name: 'Lash Extensions', img: 'https://images.unsplash.com/photo-1583001809873-a1284d563371?auto=format&fit=crop&w=800&q=80', desc: 'Classic, Hybrid and Volume extensions tailored to your eye shape.', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
+    { id: 'wigs', name: 'Wig Installation & Styling', img: 'https://images.unsplash.com/photo-1562088287-bde35a1ad921?auto=format&fit=crop&w=800&q=80', desc: 'Seamless lace melts, knot bleaching, precision cutting and styling.', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
+    { id: 'waxing', name: 'Waxing', img: 'https://images.unsplash.com/photo-1519824145371-296894a0daa9?auto=format&fit=crop&w=800&q=80', desc: 'Gentle, hygienic waxing for silky smooth skin.', items: [['Eyebrow Wax & Shape', 500], ['Underarm Wax', 700], ['Full Leg Wax', 2000]] }
+  ],
+  products: [
+    { id: 'p1', cat: 'Jewelry', name: 'Gold Hoop Earrings', price: 1200, icon: 'fa-gem', img: '', active: true },
+    { id: 'p2', cat: 'Jewelry', name: 'Layered Necklace', price: 1800, icon: 'fa-ring', img: '', active: true },
+    { id: 'p3', cat: 'Jewelry', name: 'Charm Bracelet', price: 1500, icon: 'fa-gem', img: '', active: true },
+    { id: 'p4', cat: 'Flowers', name: 'Classic Rose Bouquet', price: 3000, icon: 'fa-spa', img: '', active: true },
+    { id: 'p5', cat: 'Flowers', name: 'Mixed Seasonal Bouquet', price: 2500, icon: 'fa-seedling', img: '', active: true },
+    { id: 'p6', cat: 'Flowers', name: 'Luxury Flower Box', price: 4500, icon: 'fa-spa', img: '', active: true },
+    { id: 'p7', cat: 'Accessories', name: 'Silk Bonnet', price: 900, icon: 'fa-crown', img: '', active: true },
+    { id: 'p8', cat: 'Accessories', name: 'Lash Aftercare Kit', price: 1300, icon: 'fa-eye', img: '', active: true }
+  ]
+};
+const CATALOG_KEY = 'nayah-catalog-v1';
 /* Credentials: only a salted PBKDF2 hash is stored here, never the password.
-   NOTE: this is a client-side gate. It keeps casual visitors out, but real security
-   needs a server. See the README notes in the chat. */
+   This is a browser-side gate (see notes): it keeps casual visitors out of the admin page. */
 const AUTH = {
   user: 'nayah_admin',
   salt: '69cd01d18315213cd5a4b82aac204bf7',
   hash: '39a330dc2f362e15b34175572508cb8bdaca9149e7acf432cd4d680d5117528b',
-  iterations: 200000,
-  sessionMs: 30 * 60 * 1000,
-  maxAttempts: 5,
-  lockMs: 15 * 60 * 1000
+  iterations: 200000, sessionMs: 30 * 60 * 1000, maxAttempts: 5, lockMs: 15 * 60 * 1000
 };
-const K = { sess: 'na-admin-session', fail: 'na-admin-fails', draft: 'na-admin-draft' };
+const K = { sess: 'na-admin-session', fail: 'na-admin-fails' };
 const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 const unhex = h => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
 const store = {
@@ -96,20 +107,18 @@ const store = {
   set: (s, k, v) => { try { s.setItem(k, JSON.stringify(v)); } catch {} },
   del: (s, k) => { try { s.removeItem(k); } catch {} }
 };
-
 async function derive(pw) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
   return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unhex(AUTH.salt), iterations: AUTH.iterations }, key, 256));
 }
 function safeEqual(a, b) { let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
-
 const hasSession = () => { const s = store.get(sessionStorage, K.sess); return !!s && s.exp > Date.now(); };
-function lockRemaining() { const f = store.get(localStorage, K.fail); return f && f.until > Date.now() ? f.until - Date.now() : 0; }
+const lockRemaining = () => { const f = store.get(localStorage, K.fail); return f && f.until > Date.now() ? f.until - Date.now() : 0; };
 
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const err = $('#err');
-  if (!window.crypto?.subtle) { err.textContent = 'Secure context required. Open the site over HTTPS.'; return; }
+  if (!window.crypto?.subtle) { err.textContent = 'Open this page via http://localhost or HTTPS.'; return; }
   const left = lockRemaining();
   if (left) { err.textContent = `Too many attempts. Try again in ${Math.ceil(left / 60000)} min.`; return; }
   const okUser = safeEqual($('#u').value.trim(), AUTH.user);
@@ -127,62 +136,100 @@ $('#loginForm').addEventListener('submit', async e => {
   }
 });
 
-/* ---------- Dashboard ---------- */
-let data = null, original = null;
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ---------- Catalog ---------- */
+let data, statusTimer, newImg = '';
+function load() {
+  const c = store.get(localStorage, CATALOG_KEY);
+  return c && Array.isArray(c.products) && Array.isArray(c.services) ? c : structuredClone(DEFAULTS);
+}
+function setStatus(t, bad) {
+  const s = $('#status'); s.textContent = t; s.className = 'text-xs ' + (bad ? 'text-red-400' : 'text-emerald-400');
+  clearTimeout(statusTimer); statusTimer = setTimeout(() => s.textContent = '', 4000);
+}
+function save() {
+  try { localStorage.setItem(CATALOG_KEY, JSON.stringify(data)); setStatus('Saved ✓'); return true; }
+  catch { setStatus('Storage full. Remove some photos or use smaller ones.', true); return false; }
+}
+let debounce; const saveSoon = () => { clearTimeout(debounce); debounce = setTimeout(save, 400); };
 
-async function loadData() {
-  const r = await fetch('catalog.json', { cache: 'no-cache' });
-  original = await r.json();
-  data = store.get(localStorage, K.draft) || structuredClone(original);
+async function photoToDataUrl(file, max = 700) {
+  if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.8);
 }
-function markDirty() {
-  store.set(localStorage, K.draft, data);
-  $('#dirty').hidden = JSON.stringify(data) === JSON.stringify(original);
-}
+const thumb = p => p.img ? `<img src="${esc(p.img)}" alt="" class="w-full h-full object-cover">` : `<i class="fas ${esc(p.icon || 'fa-gem')} text-gold text-3xl" aria-hidden="true"></i>`;
+
 function render() {
+  const cats = [...new Set(data.products.map(p => p.cat))];
   $('#products').innerHTML = data.products.map((p, i) => `
-    <tr>
-      <td class="p-2"><input class="field" data-i="${i}" data-f="name" value="${esc(p.name)}" aria-label="Name"></td>
-      <td class="p-2"><input class="field" data-i="${i}" data-f="cat" value="${esc(p.cat)}" aria-label="Category" list="cats"></td>
-      <td class="p-2"><input class="field" type="number" min="0" step="50" data-i="${i}" data-f="price" value="${p.price}" aria-label="Price"></td>
-      <td class="p-2 text-center"><input type="checkbox" data-i="${i}" data-f="active" ${p.active !== false ? 'checked' : ''} aria-label="Visible"></td>
-      <td class="p-2 text-right"><button type="button" class="text-red-400 text-xs hover:underline" data-del="${i}">Delete</button></td>
-    </tr>`).join('') + `<datalist id="cats">${[...new Set(data.products.map(p => p.cat))].map(c => `<option value="${esc(c)}">`).join('')}</datalist>`;
+    <div class="bg-darkgray border border-gold/20 rounded-lg p-3 space-y-2">
+      <div class="h-40 bg-black/50 rounded flex items-center justify-center overflow-hidden">${thumb(p)}</div>
+      <label class="photo btn-o block text-center text-xs"><i class="fas fa-camera mr-1" aria-hidden="true"></i>${p.img ? 'Change photo' : 'Add photo'}<input type="file" accept="image/*" class="sr-only" data-up="${i}"></label>
+      <input class="field" data-i="${i}" data-f="name" value="${esc(p.name)}" aria-label="Item name">
+      <div class="grid grid-cols-2 gap-2">
+        <input class="field" data-i="${i}" data-f="cat" value="${esc(p.cat)}" list="cats" aria-label="Category">
+        <input class="field" type="number" min="0" step="50" data-i="${i}" data-f="price" value="${p.price}" aria-label="Price in KSh">
+      </div>
+      <div class="flex justify-between items-center text-xs">
+        <label class="flex items-center gap-2 text-gray-300"><input type="checkbox" data-i="${i}" data-f="active" ${p.active !== false ? 'checked' : ''}> Visible on site</label>
+        <button type="button" class="text-red-400 hover:underline" data-del="${i}">Delete</button>
+      </div>
+    </div>`).join('') + `<datalist id="cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>`;
   $('#services').innerHTML = data.services.map((s, si) => `
     <div class="bg-darkgray border border-gold/20 rounded-lg p-4 space-y-3">
       <h3 class="font-semibold text-gold">${esc(s.name)}</h3>
       ${s.items.map((it, ii) => `<label class="block text-xs text-gray-400">${esc(it[0])}<input class="field mt-1" type="number" min="0" step="50" data-s="${si}" data-it="${ii}" value="${it[1]}"></label>`).join('')}
     </div>`).join('');
-  markDirty();
 }
+
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.f) {
-    const p = data.products[t.dataset.i], f = t.dataset.f;
-    p[f] = f === 'active' ? t.checked : f === 'price' ? Math.max(0, Number(t.value) || 0) : t.value;
-    markDirty();
-  } else if (t.dataset.s) {
-    data.services[t.dataset.s].items[t.dataset.it][1] = Math.max(0, Number(t.value) || 0);
-    markDirty();
-  }
+    const f = t.dataset.f;
+    data.products[t.dataset.i][f] = f === 'active' ? t.checked : f === 'price' ? Math.max(0, Number(t.value) || 0) : t.value;
+  } else if (t.dataset.s) data.services[t.dataset.s].items[t.dataset.it][1] = Math.max(0, Number(t.value) || 0);
+  else return;
+  saveSoon();
 });
+
+document.addEventListener('change', async e => {
+  const t = e.target, file = t.files && t.files[0];
+  if (!file) return;
+  try {
+    const url = await photoToDataUrl(file);
+    if (t.id === 'newPhoto') { newImg = url; $('#newPreview').innerHTML = `<img src="${url}" alt="Preview" class="w-full h-full object-cover">`; }
+    else if (t.dataset.up !== undefined) {
+      const p = data.products[t.dataset.up], old = p.img;
+      p.img = url;
+      if (save()) render(); else p.img = old;
+    }
+  } catch (x) { setStatus(x.message || 'Could not read that image.', true); }
+  t.value = '';
+});
+
+$('#addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const item = { id: 'p' + Date.now().toString(36), cat: $('#newCat').value.trim(), name: $('#newName').value.trim(), price: Math.max(0, Number($('#newPrice').value) || 0), icon: 'fa-gem', img: newImg, active: true };
+  data.products.unshift(item);
+  if (!save()) { data.products.shift(); return; }
+  newImg = ''; e.target.reset(); $('#newPreview').innerHTML = '<i class="fas fa-image text-3xl" aria-hidden="true"></i>';
+  render(); setStatus('Item added ✓');
+});
+
 document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.del !== undefined && confirm('Delete this product?')) { data.products.splice(t.dataset.del, 1); render(); }
-  if (t.id === 'addProduct') { data.products.push({ id: 'p' + Date.now().toString(36), cat: 'Jewelry', name: 'New product', price: 0, icon: 'fa-gem', active: true }); render(); }
-  if (t.id === 'reset' && confirm('Discard all unpublished changes?')) { store.del(localStorage, K.draft); data = structuredClone(original); render(); }
+  if (t.dataset.del !== undefined && confirm('Delete this item?')) { data.products.splice(t.dataset.del, 1); save(); render(); }
+  if (t.id === 'reset' && confirm('Remove all your added items, photos and price changes?')) { data = structuredClone(DEFAULTS); localStorage.removeItem(CATALOG_KEY); render(); setStatus('Reset to defaults'); }
   if (t.id === 'logout') logout();
-  if (t.id === 'download') {
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })), download: 'catalog.json' });
-    a.click(); URL.revokeObjectURL(a.href);
-  }
 });
 
 function logout() { store.del(sessionStorage, K.sess); location.reload(); }
-async function showApp() {
+function showApp() {
   $('#login').hidden = true; $('#app').hidden = false;
-  try { await loadData(); render(); } catch (e) { console.error(e); alert('Could not load catalog.json. Serve this folder over http(s).'); }
+  data = load(); render();
   setTimeout(logout, Math.max(0, store.get(sessionStorage, K.sess).exp - Date.now()));
 }
 if (hasSession()) showApp();
