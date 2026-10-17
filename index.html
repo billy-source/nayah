@@ -43,7 +43,7 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
 <nav class="sticky top-0 z-40 bg-black/90 backdrop-blur-md border-b border-gold/20" aria-label="Main">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
     <a href="#top" class="flex items-center gap-3" aria-label="Nayah Allure home">
-      <img src="assets/logo.png" alt="" class="h-14 w-auto rounded border border-gold/30" onerror="this.remove()">
+      <img src="logo.jpeg" alt="" class="h-14 w-auto rounded border border-gold/30" onerror="this.remove()">
       <span class="font-heading text-xl md:text-2xl font-bold tracking-widest gold-text hidden xs:block">NAYAH ALLURE</span>
     </a>
     <div class="hidden md:flex items-center gap-8 text-sm uppercase tracking-widest font-medium">
@@ -171,8 +171,8 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
 'use strict';
 const DEFAULTS = {
   services: [
-    { id: 'lashes', name: 'Lash Extensions', img: 'https://images.unsplash.com/photo-1583001809873-a1284d563371?auto=format&fit=crop&w=800&q=80', desc: 'Classic, Hybrid and Volume extensions tailored to your eye shape.', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
-    { id: 'wigs', name: 'Wig Installation & Styling', img: 'https://images.unsplash.com/photo-1562088287-bde35a1ad921?auto=format&fit=crop&w=800&q=80', desc: 'Seamless lace melts, knot bleaching, precision cutting and styling.', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
+    { id: 'lashes', name: 'Lash Extensions', img: 'lash%20extension.png', desc: 'Classic, Hybrid and Volume extensions tailored to your eye shape.', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
+    { id: 'wigs', name: 'Wig Installation & Styling', img: 'wig.png', desc: 'Seamless lace melts, knot bleaching, precision cutting and styling.', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
     { id: 'waxing', name: 'Waxing', img: 'https://images.unsplash.com/photo-1519824145371-296894a0daa9?auto=format&fit=crop&w=800&q=80', desc: 'Gentle, hygienic waxing for silky smooth skin.', items: [['Eyebrow Wax & Shape', 500], ['Underarm Wax', 700], ['Full Leg Wax', 2000]] }
   ],
   products: [
@@ -201,7 +201,12 @@ function loadCatalog() {
   let c = null;
   try { c = JSON.parse(localStorage.getItem(CATALOG_KEY)); } catch {}
   if (!c || !Array.isArray(c.products) || !Array.isArray(c.services)) c = DEFAULTS;
-  SERVICES = c.services; PRODUCTS = c.products;
+  // Service photos/descriptions always come from DEFAULTS; only prices come from admin edits
+  SERVICES = DEFAULTS.services.map(d => {
+    const saved = c.services.find(s => s.id === d.id);
+    return { ...d, items: saved && saved.items.length === d.items.length ? saved.items : d.items };
+  });
+  PRODUCTS = c.products;
 }
 
 function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(timer); timer = setTimeout(() => t.hidden = true, 2500); }
