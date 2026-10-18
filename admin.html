@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Nayah Allure | Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script>tailwind.config={theme:{extend:{colors:{gold:{DEFAULT:'#D4AF37',dark:'#AA7C11'},charcoal:'#121212',darkgray:'#1C1C1C'}}}};</script>
 <style>
@@ -14,21 +15,20 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
 .field{width:100%;background:#0d0d0d;border:1px solid #333;border-radius:.375rem;padding:.5rem .7rem;font-size:.875rem;color:#f3f3f3}
 .field:focus{outline:none;border-color:#D4AF37}
 .btn{background:#D4AF37;color:#000;font-weight:700;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem}
-.btn:hover{filter:brightness(1.1)}
+.btn:hover{filter:brightness(1.1)}.btn:disabled{opacity:.5}
 .btn-o{border:1px solid #D4AF37;color:#D4AF37;border-radius:.375rem;padding:.55rem 1rem;font-size:.8rem;cursor:pointer;display:inline-block}
 .btn-o:hover{background:rgba(212,175,55,.1)}
-:focus-within.photo{outline:2px solid #D4AF37}
-:focus-visible{outline:2px solid #D4AF37;outline-offset:2px}
+:focus-visible,.photo:focus-within{outline:2px solid #D4AF37;outline-offset:2px}
 </style>
 </head>
 <body>
 <main id="login" class="min-h-screen flex items-center justify-center p-4">
   <form id="loginForm" class="w-full max-w-sm bg-darkgray border border-gold/30 rounded-xl p-8 space-y-4">
     <h1 class="text-xl font-bold text-gold text-center tracking-widest">NAYAH ALLURE ADMIN</h1>
-    <div><label for="u" class="text-xs text-gray-400">Username</label><input id="u" class="field" required autocomplete="username"></div>
+    <div><label for="u" class="text-xs text-gray-400">Email</label><input id="u" type="email" class="field" required autocomplete="username"></div>
     <div><label for="p" class="text-xs text-gray-400">Password</label><input id="p" type="password" class="field" required autocomplete="current-password"></div>
     <p id="err" class="text-red-400 text-xs min-h-[1rem]" role="alert"></p>
-    <button class="btn w-full" type="submit">Sign in</button>
+    <button id="loginBtn" class="btn w-full" type="submit">Sign in</button>
     <a href="index.html" class="block text-center text-xs text-gray-500 hover:text-gold">← Back to website</a>
   </form>
 </main>
@@ -37,7 +37,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
   <header class="bg-black border-b border-gold/20 sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
       <span class="font-bold text-gold tracking-widest">ADMIN</span>
-      <div class="flex items-center gap-3"><span id="status" class="text-xs text-emerald-400" role="status"></span><a href="index.html" target="_blank" class="btn-o">View site</a><button id="logout" class="btn-o" type="button">Log out</button></div>
+      <div class="flex items-center gap-3"><span id="status" class="text-xs" role="status"></span><a href="index.html" target="_blank" class="btn-o">View site</a><button id="logout" class="btn-o" type="button">Log out</button></div>
     </div>
   </header>
   <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
@@ -52,7 +52,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
           <label class="sm:col-span-3 text-xs text-gray-400">Item name<input id="newName" class="field mt-1" required maxlength="80" placeholder="e.g. Pearl Drop Earrings"></label>
           <label class="text-xs text-gray-400">Category<input id="newCat" class="field mt-1" required maxlength="40" list="cats" placeholder="Jewelry"></label>
           <label class="text-xs text-gray-400">Price (KSh)<input id="newPrice" class="field mt-1" type="number" min="0" step="50" required placeholder="1500"></label>
-          <div class="flex items-end"><button class="btn w-full" type="submit"><i class="fas fa-plus mr-1" aria-hidden="true"></i> Add item</button></div>
+          <div class="flex items-end"><button id="addBtn" class="btn w-full" type="submit"><i class="fas fa-plus mr-1" aria-hidden="true"></i> Add item</button></div>
         </div>
       </form>
     </section>
@@ -64,175 +64,164 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
       <h2 class="text-lg font-bold text-gold mb-4">Service prices</h2>
       <div id="services" class="grid md:grid-cols-3 gap-4"></div>
     </section>
-    <section><button id="reset" class="btn-o" type="button">Reset everything to defaults</button></section>
   </main>
 </div>
 
 <script>
 (() => {
 'use strict';
-const DEFAULTS = {
-  services: [
-    { id: 'lashes', name: 'Lash Extensions', img: 'https://images.unsplash.com/photo-1583001809873-a1284d563371?auto=format&fit=crop&w=800&q=80', desc: 'Classic, Hybrid and Volume extensions tailored to your eye shape.', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
-    { id: 'wigs', name: 'Wig Installation & Styling', img: 'https://images.unsplash.com/photo-1562088287-bde35a1ad921?auto=format&fit=crop&w=800&q=80', desc: 'Seamless lace melts, knot bleaching, precision cutting and styling.', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
-    { id: 'waxing', name: 'Waxing', img: 'https://images.unsplash.com/photo-1519824145371-296894a0daa9?auto=format&fit=crop&w=800&q=80', desc: 'Gentle, hygienic waxing for silky smooth skin.', items: [['Eyebrow Wax & Shape', 500], ['Underarm Wax', 700], ['Full Leg Wax', 2000]] }
-  ],
-  products: [
-    { id: 'p1', cat: 'Jewelry', name: 'Gold Hoop Earrings', price: 1200, icon: 'fa-gem', img: '', active: true },
-    { id: 'p2', cat: 'Jewelry', name: 'Layered Necklace', price: 1800, icon: 'fa-ring', img: '', active: true },
-    { id: 'p3', cat: 'Jewelry', name: 'Charm Bracelet', price: 1500, icon: 'fa-gem', img: '', active: true },
-    { id: 'p4', cat: 'Flowers', name: 'Classic Rose Bouquet', price: 3000, icon: 'fa-spa', img: '', active: true },
-    { id: 'p5', cat: 'Flowers', name: 'Mixed Seasonal Bouquet', price: 2500, icon: 'fa-seedling', img: '', active: true },
-    { id: 'p6', cat: 'Flowers', name: 'Luxury Flower Box', price: 4500, icon: 'fa-spa', img: '', active: true },
-    { id: 'p7', cat: 'Accessories', name: 'Silk Bonnet', price: 900, icon: 'fa-crown', img: '', active: true },
-    { id: 'p8', cat: 'Accessories', name: 'Lash Aftercare Kit', price: 1300, icon: 'fa-eye', img: '', active: true }
-  ]
-};
-const CATALOG_KEY = 'nayah-catalog-v1';
-/* Credentials: only a salted PBKDF2 hash is stored here, never the password.
-   This is a browser-side gate (see notes): it keeps casual visitors out of the admin page. */
-const AUTH = {
-  user: 'nayah_admin',
-  salt: '69cd01d18315213cd5a4b82aac204bf7',
-  hash: '39a330dc2f362e15b34175572508cb8bdaca9149e7acf432cd4d680d5117528b',
-  iterations: 200000, sessionMs: 30 * 60 * 1000, maxAttempts: 5, lockMs: 15 * 60 * 1000
-};
-const K = { sess: 'na-admin-session', fail: 'na-admin-fails' };
+
+const SUPABASE_URL = 'https://znzfxfsmrcxkeuathtos.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuemZ4ZnNtcmN4a2V1YXRodG9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTI2NDEsImV4cCI6MjEwNzg4ODY0MX0.o-JGKaJ0IlAB3yi5kiXeYCe4Mfuerj-EumeCNvshIvo';
+const BUCKET = 'nayah-photos';
+const SERVICES = [
+  { id: 'lashes', name: 'Lash Extensions', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
+  { id: 'wigs', name: 'Wig Installation & Styling', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
+  { id: 'waxing', name: 'Waxing', items: [['Eyebrow Wax & Shape', 500], ['Underarm Wax', 700], ['Full Leg Wax', 2000]] }
+];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
-const unhex = h => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
-const store = {
-  get: (s, k) => { try { return JSON.parse(s.getItem(k)); } catch { return null; } },
-  set: (s, k, v) => { try { s.setItem(k, JSON.stringify(v)); } catch {} },
-  del: (s, k) => { try { s.removeItem(k); } catch {} }
-};
-async function derive(pw) {
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
-  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unhex(AUTH.salt), iterations: AUTH.iterations }, key, 256));
-}
-function safeEqual(a, b) { let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
-const hasSession = () => { const s = store.get(sessionStorage, K.sess); return !!s && s.exp > Date.now(); };
-const lockRemaining = () => { const f = store.get(localStorage, K.fail); return f && f.until > Date.now() ? f.until - Date.now() : 0; };
+if (SUPABASE_URL.startsWith('PASTE') || !window.supabase) { $('#err').textContent = 'Not configured: paste your Supabase URL and key at the top of this script.'; $('#loginBtn').disabled = true; return; }
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const photoUrl = p => p ? sb.storage.from(BUCKET).getPublicUrl(p).data.publicUrl : '';
 
-$('#loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const err = $('#err');
-  if (!window.crypto?.subtle) { err.textContent = 'Open this page via http://localhost or HTTPS.'; return; }
-  const left = lockRemaining();
-  if (left) { err.textContent = `Too many attempts. Try again in ${Math.ceil(left / 60000)} min.`; return; }
-  const okUser = safeEqual($('#u').value.trim(), AUTH.user);
-  const okPass = safeEqual(await derive($('#p').value), AUTH.hash);
-  if (okUser && okPass) {
-    store.del(localStorage, K.fail);
-    store.set(sessionStorage, K.sess, { exp: Date.now() + AUTH.sessionMs });
-    $('#p').value = ''; err.textContent = ''; showApp();
-  } else {
-    const f = store.get(localStorage, K.fail) || { n: 0 };
-    f.n = (f.n || 0) + 1;
-    if (f.n >= AUTH.maxAttempts) { f.until = Date.now() + AUTH.lockMs; f.n = 0; }
-    store.set(localStorage, K.fail, f);
-    err.textContent = 'Invalid username or password.';
-  }
-});
-
-/* ---------- Catalog ---------- */
-let data, statusTimer, newImg = '';
-function load() {
-  const c = store.get(localStorage, CATALOG_KEY);
-  return c && Array.isArray(c.products) && Array.isArray(c.services) ? c : structuredClone(DEFAULTS);
-}
+let items = [], prices = {}, newFile = null, timers = {}, statusTimer;
 function setStatus(t, bad) {
   const s = $('#status'); s.textContent = t; s.className = 'text-xs ' + (bad ? 'text-red-400' : 'text-emerald-400');
-  clearTimeout(statusTimer); statusTimer = setTimeout(() => s.textContent = '', 4000);
+  clearTimeout(statusTimer); statusTimer = setTimeout(() => s.textContent = '', 5000);
 }
-function save() {
-  try { localStorage.setItem(CATALOG_KEY, JSON.stringify(data)); setStatus('Saved ✓'); return true; }
-  catch { setStatus('Storage full. Remove some photos or use smaller ones.', true); return false; }
-}
-let debounce; const saveSoon = () => { clearTimeout(debounce); debounce = setTimeout(save, 400); };
+const fail = (e, what) => { console.error(e); setStatus(`${what}: ${e.message || e}`, true); };
 
-async function photoToDataUrl(file, max = 700) {
+/* ---------- Auth ---------- */
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('#loginBtn').disabled = true; $('#err').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: $('#u').value.trim(), password: $('#p').value });
+  $('#loginBtn').disabled = false;
+  if (error) { $('#err').textContent = 'Invalid email or password.'; return; }
+  $('#p').value = ''; enter();
+});
+$('#logout').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+async function enter() {
+  $('#login').hidden = true; $('#app').hidden = false;
+  await refresh();
+}
+async function refresh() {
+  const [p, s] = await Promise.all([
+    sb.from('nayah_products').select('*').order('created_at', { ascending: false }),
+    sb.from('nayah_settings').select('value').eq('key', 'service_prices').maybeSingle()
+  ]);
+  if (p.error) return fail(p.error, 'Could not load items');
+  items = p.data; prices = (s.data && s.data.value) || {}; render();
+}
+
+/* ---------- Photos ---------- */
+async function toJpegBlob(file, max = 900) {
   if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
   const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.8);
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Could not process image')), 'image/jpeg', 0.82));
 }
-const thumb = p => p.img ? `<img src="${esc(p.img)}" alt="" class="w-full h-full object-cover">` : `<i class="fas ${esc(p.icon || 'fa-gem')} text-gold text-3xl" aria-hidden="true"></i>`;
+async function uploadPhoto(file) {
+  const path = `${crypto.randomUUID()}.jpg`;
+  const { error } = await sb.storage.from(BUCKET).upload(path, await toJpegBlob(file), { contentType: 'image/jpeg', cacheControl: '31536000' });
+  if (error) throw error;
+  return path;
+}
+const removePhoto = path => path && sb.storage.from(BUCKET).remove([path]);
 
+/* ---------- Render ---------- */
+const thumb = p => p.img_path ? `<img src="${esc(photoUrl(p.img_path))}" alt="" class="w-full h-full object-cover">` : `<i class="fas ${esc(p.icon || 'fa-gem')} text-gold text-3xl" aria-hidden="true"></i>`;
 function render() {
-  const cats = [...new Set(data.products.map(p => p.cat))];
-  $('#products').innerHTML = data.products.map((p, i) => `
+  const cats = [...new Set(items.map(p => p.category))];
+  $('#products').innerHTML = items.length ? items.map(p => `
     <div class="bg-darkgray border border-gold/20 rounded-lg p-3 space-y-2">
       <div class="h-40 bg-black/50 rounded flex items-center justify-center overflow-hidden">${thumb(p)}</div>
-      <label class="photo btn-o block text-center text-xs"><i class="fas fa-camera mr-1" aria-hidden="true"></i>${p.img ? 'Change photo' : 'Add photo'}<input type="file" accept="image/*" class="sr-only" data-up="${i}"></label>
-      <input class="field" data-i="${i}" data-f="name" value="${esc(p.name)}" aria-label="Item name">
+      <label class="photo btn-o block text-center text-xs"><i class="fas fa-camera mr-1" aria-hidden="true"></i>${p.img_path ? 'Change photo' : 'Add photo'}<input type="file" accept="image/*" class="sr-only" data-up="${esc(p.id)}"></label>
+      <input class="field" data-id="${esc(p.id)}" data-f="name" maxlength="80" value="${esc(p.name)}" aria-label="Item name">
       <div class="grid grid-cols-2 gap-2">
-        <input class="field" data-i="${i}" data-f="cat" value="${esc(p.cat)}" list="cats" aria-label="Category">
-        <input class="field" type="number" min="0" step="50" data-i="${i}" data-f="price" value="${p.price}" aria-label="Price in KSh">
+        <input class="field" data-id="${esc(p.id)}" data-f="category" maxlength="40" value="${esc(p.category)}" list="cats" aria-label="Category">
+        <input class="field" type="number" min="0" step="50" data-id="${esc(p.id)}" data-f="price" value="${p.price}" aria-label="Price in KSh">
       </div>
       <div class="flex justify-between items-center text-xs">
-        <label class="flex items-center gap-2 text-gray-300"><input type="checkbox" data-i="${i}" data-f="active" ${p.active !== false ? 'checked' : ''}> Visible on site</label>
-        <button type="button" class="text-red-400 hover:underline" data-del="${i}">Delete</button>
+        <label class="flex items-center gap-2 text-gray-300"><input type="checkbox" data-id="${esc(p.id)}" data-f="active" ${p.active ? 'checked' : ''}> Visible on site</label>
+        <button type="button" class="text-red-400 hover:underline" data-del="${esc(p.id)}">Delete</button>
       </div>
-    </div>`).join('') + `<datalist id="cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>`;
-  $('#services').innerHTML = data.services.map((s, si) => `
+    </div>`).join('') + `<datalist id="cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>` : '<p class="text-gray-400 text-sm">No items yet. Add your first one above.</p>';
+  $('#services').innerHTML = SERVICES.map(s => `
     <div class="bg-darkgray border border-gold/20 rounded-lg p-4 space-y-3">
       <h3 class="font-semibold text-gold">${esc(s.name)}</h3>
-      ${s.items.map((it, ii) => `<label class="block text-xs text-gray-400">${esc(it[0])}<input class="field mt-1" type="number" min="0" step="50" data-s="${si}" data-it="${ii}" value="${it[1]}"></label>`).join('')}
+      ${s.items.map(([n, def], i) => `<label class="block text-xs text-gray-400">${esc(n)}<input class="field mt-1" type="number" min="0" step="50" data-s="${s.id}" data-i="${i}" value="${Number(prices[s.id]?.[i] ?? def)}"></label>`).join('')}
     </div>`).join('');
 }
 
+/* ---------- Edits (auto-saved to Supabase) ---------- */
 document.addEventListener('input', e => {
   const t = e.target;
-  if (t.dataset.f) {
-    const f = t.dataset.f;
-    data.products[t.dataset.i][f] = f === 'active' ? t.checked : f === 'price' ? Math.max(0, Number(t.value) || 0) : t.value;
-  } else if (t.dataset.s) data.services[t.dataset.s].items[t.dataset.it][1] = Math.max(0, Number(t.value) || 0);
-  else return;
-  saveSoon();
+  if (t.dataset.id) {
+    const f = t.dataset.f, id = t.dataset.id;
+    const v = f === 'active' ? t.checked : f === 'price' ? Math.max(0, Math.round(Number(t.value) || 0)) : t.value.trim();
+    if ((f === 'name' || f === 'category') && !v) return;
+    const row = items.find(x => x.id === id); if (row) row[f] = v;
+    clearTimeout(timers[id + f]);
+    timers[id + f] = setTimeout(async () => {
+      const { error } = await sb.from('nayah_products').update({ [f]: v }).eq('id', id);
+      error ? fail(error, 'Save failed') : setStatus('Saved ✓');
+    }, 500);
+  } else if (t.dataset.s) {
+    const s = SERVICES.find(x => x.id === t.dataset.s);
+    prices[s.id] = prices[s.id] || s.items.map(i => i[1]);
+    prices[s.id][t.dataset.i] = Math.max(0, Math.round(Number(t.value) || 0));
+    clearTimeout(timers.svc);
+    timers.svc = setTimeout(async () => {
+      const { error } = await sb.from('nayah_settings').upsert({ key: 'service_prices', value: prices });
+      error ? fail(error, 'Save failed') : setStatus('Saved ✓');
+    }, 500);
+  }
 });
 
 document.addEventListener('change', async e => {
   const t = e.target, file = t.files && t.files[0];
   if (!file) return;
   try {
-    const url = await photoToDataUrl(file);
-    if (t.id === 'newPhoto') { newImg = url; $('#newPreview').innerHTML = `<img src="${url}" alt="Preview" class="w-full h-full object-cover">`; }
-    else if (t.dataset.up !== undefined) {
-      const p = data.products[t.dataset.up], old = p.img;
-      p.img = url;
-      if (save()) render(); else p.img = old;
+    if (t.id === 'newPhoto') {
+      newFile = file; $('#newPreview').innerHTML = `<img src="${URL.createObjectURL(file)}" alt="Preview" class="w-full h-full object-cover">`;
+    } else if (t.dataset.up) {
+      setStatus('Uploading photo…');
+      const row = items.find(x => x.id === t.dataset.up), old = row.img_path, path = await uploadPhoto(file);
+      const { error } = await sb.from('nayah_products').update({ img_path: path }).eq('id', row.id);
+      if (error) { await removePhoto(path); throw error; }
+      row.img_path = path; await removePhoto(old); render(); setStatus('Photo updated ✓');
     }
-  } catch (x) { setStatus(x.message || 'Could not read that image.', true); }
+  } catch (x) { fail(x, 'Photo failed'); }
   t.value = '';
 });
 
-$('#addForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const item = { id: 'p' + Date.now().toString(36), cat: $('#newCat').value.trim(), name: $('#newName').value.trim(), price: Math.max(0, Number($('#newPrice').value) || 0), icon: 'fa-gem', img: newImg, active: true };
-  data.products.unshift(item);
-  if (!save()) { data.products.shift(); return; }
-  newImg = ''; e.target.reset(); $('#newPreview').innerHTML = '<i class="fas fa-image text-3xl" aria-hidden="true"></i>';
-  render(); setStatus('Item added ✓');
+$('#addForm').addEventListener('submit', async e => {
+  e.preventDefault(); const btn = $('#addBtn'); btn.disabled = true;
+  let path = null;
+  try {
+    if (newFile) path = await uploadPhoto(newFile);
+    const { error } = await sb.from('nayah_products').insert({ name: $('#newName').value.trim(), category: $('#newCat').value.trim(), price: Math.max(0, Math.round(Number($('#newPrice').value) || 0)), img_path: path });
+    if (error) throw error;
+    newFile = null; path = null; e.target.reset(); $('#newPreview').innerHTML = '<i class="fas fa-image text-3xl" aria-hidden="true"></i>';
+    await refresh(); setStatus('Item added ✓');
+  } catch (x) { if (path) await removePhoto(path); fail(x, 'Could not add item'); }
+  finally { btn.disabled = false; }
 });
 
-document.addEventListener('click', e => {
-  const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.del !== undefined && confirm('Delete this item?')) { data.products.splice(t.dataset.del, 1); save(); render(); }
-  if (t.id === 'reset' && confirm('Remove all your added items, photos and price changes?')) { data = structuredClone(DEFAULTS); localStorage.removeItem(CATALOG_KEY); render(); setStatus('Reset to defaults'); }
-  if (t.id === 'logout') logout();
+document.addEventListener('click', async e => {
+  const t = e.target.closest('button[data-del]'); if (!t) return;
+  const row = items.find(x => x.id === t.dataset.del);
+  if (!row || !confirm(`Delete “${row.name}” and its photo?`)) return;
+  const { error } = await sb.from('nayah_products').delete().eq('id', row.id);
+  if (error) return fail(error, 'Delete failed');
+  await removePhoto(row.img_path); items = items.filter(x => x.id !== row.id); render(); setStatus('Deleted ✓');
 });
 
-function logout() { store.del(sessionStorage, K.sess); location.reload(); }
-function showApp() {
-  $('#login').hidden = true; $('#app').hidden = false;
-  data = load(); render();
-  setTimeout(logout, Math.max(0, store.get(sessionStorage, K.sess).exp - Date.now()));
-}
-if (hasSession()) showApp();
+sb.auth.getSession().then(({ data }) => { if (data.session) enter(); });
 })();
 </script>
 </body>

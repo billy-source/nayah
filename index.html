@@ -7,6 +7,7 @@
 <meta name="description" content="Nayah Allure is a Nairobi beauty studio offering lash extensions, wig installation, waxing, luxury jewelry and fresh flower bouquets.">
 <meta name="theme-color" content="#0d0d0d">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -174,19 +175,12 @@ const DEFAULTS = {
     { id: 'lashes', name: 'Lash Extensions', img: 'lash%20extension.png', desc: 'Classic, Hybrid and Volume extensions tailored to your eye shape.', items: [['Classic Natural Set', 2500], ['Hybrid Glamour Set', 3500], ['Russian Volume Set', 4500]] },
     { id: 'wigs', name: 'Wig Installation & Styling', img: 'wig.png', desc: 'Seamless lace melts, knot bleaching, precision cutting and styling.', items: [['Frontal Wig Melt & Install', 3500], ['Closure Wig Install', 3000], ['Wig Revamp & Coloring', 2500]] },
     { id: 'waxing', name: 'Waxing', img: 'https://images.unsplash.com/photo-1519824145371-296894a0daa9?auto=format&fit=crop&w=800&q=80', desc: 'Gentle, hygienic waxing for silky smooth skin.', items: [['Eyebrow Wax & Shape', 500], ['Underarm Wax', 700], ['Full Leg Wax', 2000]] }
-  ],
-  products: [
-    { id: 'p1', cat: 'Jewelry', name: 'Gold Hoop Earrings', price: 1200, icon: 'fa-gem', img: '', active: true },
-    { id: 'p2', cat: 'Jewelry', name: 'Layered Necklace', price: 1800, icon: 'fa-ring', img: '', active: true },
-    { id: 'p3', cat: 'Jewelry', name: 'Charm Bracelet', price: 1500, icon: 'fa-gem', img: '', active: true },
-    { id: 'p4', cat: 'Flowers', name: 'Classic Rose Bouquet', price: 3000, icon: 'fa-spa', img: '', active: true },
-    { id: 'p5', cat: 'Flowers', name: 'Mixed Seasonal Bouquet', price: 2500, icon: 'fa-seedling', img: '', active: true },
-    { id: 'p6', cat: 'Flowers', name: 'Luxury Flower Box', price: 4500, icon: 'fa-spa', img: '', active: true },
-    { id: 'p7', cat: 'Accessories', name: 'Silk Bonnet', price: 900, icon: 'fa-crown', img: '', active: true },
-    { id: 'p8', cat: 'Accessories', name: 'Lash Aftercare Kit', price: 1300, icon: 'fa-eye', img: '', active: true }
   ]
 };
-const CATALOG_KEY = 'nayah-catalog-v1';
+/* Supabase: paste your Project URL and anon/publishable key (safe to expose; NEVER paste a service_role/secret key) */
+const SUPABASE_URL = 'https://znzfxfsmrcxkeuathtos.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuemZ4ZnNtcmN4a2V1YXRodG9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTI2NDEsImV4cCI6MjEwNzg4ODY0MX0.o-JGKaJ0IlAB3yi5kiXeYCe4Mfuerj-EumeCNvshIvo';
+const sb = !SUPABASE_URL.startsWith('PASTE') && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const CFG = { wa: '254797787798', cur: 'KSh', key: 'nayah-cart-v2' };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -196,17 +190,22 @@ const el = (tag, cls, html = '') => Object.assign(document.createElement(tag), {
 const wa = t => `https://wa.me/${CFG.wa}?text=${encodeURIComponent(t)}`;
 let SERVICES = [], PRODUCTS = [], category = 'All', service = null, timer;
 
-/* Catalog: managed from admin.html, stored in this browser; falls back to DEFAULTS */
-function loadCatalog() {
-  let c = null;
-  try { c = JSON.parse(localStorage.getItem(CATALOG_KEY)); } catch {}
-  if (!c || !Array.isArray(c.products) || !Array.isArray(c.services)) c = DEFAULTS;
-  // Service photos/descriptions always come from DEFAULTS; only prices come from admin edits
-  SERVICES = DEFAULTS.services.map(d => {
-    const saved = c.services.find(s => s.id === d.id);
-    return { ...d, items: saved && saved.items.length === d.items.length ? saved.items : d.items };
-  });
-  PRODUCTS = c.products;
+
+let loadFailed = false;
+const photoUrl = path => path ? sb.storage.from('nayah-photos').getPublicUrl(path).data.publicUrl : '';
+async function loadCatalog() {
+  SERVICES = DEFAULTS.services;
+  try {
+    if (!sb) throw new Error('Supabase is not configured');
+    const [prod, set] = await Promise.all([
+      sb.from('nayah_products').select('*').order('created_at', { ascending: false }),
+      sb.from('nayah_settings').select('value').eq('key', 'service_prices').maybeSingle()
+    ]);
+    if (prod.error) throw prod.error;
+    PRODUCTS = prod.data.map(p => ({ id: p.id, cat: p.category, name: p.name, price: p.price, icon: p.icon, img: photoUrl(p.img_path), active: p.active }));
+    const prices = (set.data && set.data.value) || {};
+    SERVICES = DEFAULTS.services.map(d => ({ ...d, items: d.items.map(([n, p], i) => [n, Number(prices[d.id]?.[i] ?? p)]) }));
+  } catch (err) { console.error('Catalog failed to load:', err); loadFailed = true; }
 }
 
 function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(timer); timer = setTimeout(() => t.hidden = true, 2500); }
@@ -311,11 +310,12 @@ $('#bookingForm').addEventListener('submit', e => {
   e.target.reset(); closeModals();
 });
 
-// Refresh live if the admin edits the catalog in another tab
-window.addEventListener('storage', e => { if (e.key === CATALOG_KEY) { loadCatalog(); renderServices(); renderShop(); renderCart(); } });
-
 $('#year').textContent = new Date().getFullYear();
-cart.load(); loadCatalog(); renderServices(); renderShop(); renderCart();
+cart.load(); renderCart();
+loadCatalog().then(() => {
+  renderServices(); renderShop(); renderCart();
+  if (loadFailed) $('#productGrid').innerHTML = '<p class="col-span-full text-center text-gray-400">Shop unavailable right now. Please contact us on WhatsApp.</p>';
+});
 })();
 </script>
 </body>
