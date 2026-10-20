@@ -42,6 +42,18 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
   </header>
   <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
     <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gold">Online orders (Paystack)</h2>
+        <button id="ordersRefresh" type="button" class="btn-o text-xs"><i class="fas fa-rotate mr-1" aria-hidden="true"></i>Refresh</button>
+      </div>
+      <div class="bg-darkgray border border-gold/20 rounded-lg overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-gray-400 uppercase text-left"><tr><th class="p-3">Date</th><th class="p-3">Reference</th><th class="p-3">Customer</th><th class="p-3">Items</th><th class="p-3 text-right">Amount</th><th class="p-3">Status</th></tr></thead>
+          <tbody id="orders"></tbody>
+        </table>
+      </div>
+    </section>
+    <section>
       <h2 class="text-lg font-bold text-gold mb-4">Add new item</h2>
       <form id="addForm" class="bg-darkgray border border-gold/20 rounded-lg p-4 grid md:grid-cols-[160px_1fr] gap-4">
         <div>
@@ -113,7 +125,25 @@ async function refresh() {
   ]);
   if (p.error) return fail(p.error, 'Could not load items');
   items = p.data; prices = (s.data && s.data.value) || {}; render();
+  loadOrders();
 }
+
+/* ---------- Orders ---------- */
+const STATUS_CLS = { paid: 'bg-emerald-500/20 text-emerald-300', pending: 'bg-yellow-500/20 text-yellow-300', failed: 'bg-red-500/20 text-red-300' };
+async function loadOrders() {
+  const { data, error } = await sb.from('nayah_orders').select('*').order('created_at', { ascending: false }).limit(100);
+  if (error) { $('#orders').innerHTML = `<tr><td colspan="6" class="p-3 text-gray-400">Orders unavailable (${esc(error.message)}). Has the orders migration been run?</td></tr>`; return; }
+  $('#orders').innerHTML = data.length ? data.map(o => `
+    <tr class="border-t border-gray-800 align-top">
+      <td class="p-3 whitespace-nowrap text-gray-400">${esc(new Date(o.created_at).toLocaleString('en-KE', { dateStyle: 'medium', timeStyle: 'short' }))}</td>
+      <td class="p-3 font-mono text-xs">${esc(o.reference)}</td>
+      <td class="p-3">${esc(o.customer_name)}<div class="text-xs text-gray-400">${esc(o.customer_phone)} · ${esc(o.customer_email)}</div></td>
+      <td class="p-3 text-xs text-gray-300">${(o.items || []).map(i => `${i.qty} × ${esc(i.name)}`).join('<br>')}</td>
+      <td class="p-3 text-right whitespace-nowrap">KSh ${Number(o.amount).toLocaleString('en-KE')}</td>
+      <td class="p-3"><span class="text-xs px-2 py-0.5 rounded-full ${STATUS_CLS[o.status] || ''}">${esc(o.status)}</span>${o.channel ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.channel.replace('_', ' '))}</div>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="p-3 text-gray-400">No online orders yet.</td></tr>';
+}
+$('#ordersRefresh').addEventListener('click', loadOrders);
 
 /* ---------- Photos ---------- */
 async function toJpegBlob(file, max = 900) {
