@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0d0d0d">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://js.paystack.co/v2/inline.js" defer></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +94,7 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
         <ul class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-800 text-sm font-medium">
           <li><i class="fas fa-check-circle text-gold mr-2" aria-hidden="true"></i>Certified Stylists</li>
           <li><i class="fas fa-check-circle text-gold mr-2" aria-hidden="true"></i>Premium Products</li>
-          <li><i class="fas fa-check-circle text-gold mr-2" aria-hidden="true"></i>M-Pesa Payments</li>
+          <li><i class="fas fa-check-circle text-gold mr-2" aria-hidden="true"></i>M-Pesa &amp; Card Payments</li>
           <li><i class="fas fa-check-circle text-gold mr-2" aria-hidden="true"></i>Same-Day Delivery</li>
         </ul>
       </div>
@@ -145,7 +146,8 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
   <div id="cartItems" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
   <div class="p-5 border-t border-gray-800 space-y-3">
     <div class="flex justify-between font-semibold"><span>Total</span><span id="cartTotal" class="text-gold">KSh 0</span></div>
-    <button type="button" id="checkoutBtn" class="btn w-full py-3 text-sm"><i class="fab fa-whatsapp mr-1" aria-hidden="true"></i> Order via WhatsApp (M-Pesa)</button>
+    <button type="button" id="payBtn" class="btn w-full py-3 text-sm"><i class="fas fa-lock mr-1" aria-hidden="true"></i> Pay now (M-Pesa / Card)</button>
+    <button type="button" id="checkoutBtn" class="w-full py-2 text-xs uppercase tracking-wider border border-gold/40 text-gold rounded hover:bg-gold/10 transition"><i class="fab fa-whatsapp mr-1" aria-hidden="true"></i> Or order via WhatsApp</button>
   </div>
 </aside>
 
@@ -163,6 +165,20 @@ body{font-family:'Montserrat',sans-serif;background:#0d0d0d;color:#f3f3f3}
     </div>
     <div><label for="bkNotes" class="text-xs text-gray-400">Notes (optional)</label><textarea id="bkNotes" rows="2" class="field"></textarea></div>
     <button type="submit" class="btn w-full py-3 text-sm">Send Request on WhatsApp</button>
+  </form>
+</div>
+<div id="payModal" hidden class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+  <form id="payForm" class="card rounded-xl w-full max-w-md p-6 space-y-4">
+    <div class="flex justify-between items-center">
+      <h2 id="payTitle" class="font-heading text-xl font-bold gold-text">Checkout</h2>
+      <button type="button" data-action="close-modal" class="text-gray-400 hover:text-white" aria-label="Close"><i class="fas fa-times" aria-hidden="true"></i></button>
+    </div>
+    <div><label for="payName" class="text-xs text-gray-400">Full name</label><input id="payName" class="field" required maxlength="100" autocomplete="name"></div>
+    <div><label for="payEmail" class="text-xs text-gray-400">Email (for your receipt)</label><input id="payEmail" class="field" type="email" required maxlength="200" autocomplete="email"></div>
+    <div><label for="payPhone" class="text-xs text-gray-400">Phone (M-Pesa / delivery)</label><input id="payPhone" class="field" type="tel" required maxlength="30" autocomplete="tel" placeholder="07XX XXX XXX"></div>
+    <div class="flex justify-between text-sm font-semibold border-t border-gray-800 pt-3"><span>Total</span><span id="payTotal" class="text-gold">KSh 0</span></div>
+    <button type="submit" id="paySubmit" class="btn w-full py-3 text-sm"><i class="fas fa-lock mr-1" aria-hidden="true"></i> Pay securely with Paystack</button>
+    <p class="text-[11px] text-gray-500 text-center">Payments are processed by Paystack. We never see your card or M-Pesa PIN.</p>
   </form>
 </div>
 <div id="toast" hidden class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] bg-gold text-black text-sm font-semibold px-4 py-2 rounded shadow-lg" role="status"></div>
@@ -281,7 +297,7 @@ function openBooking(id) {
 }
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-book],[data-add],[data-cat],[data-inc],[data-dec],#checkoutBtn,#mobileMenu a');
+  const t = e.target.closest('[data-action],[data-book],[data-add],[data-cat],[data-inc],[data-dec],#checkoutBtn,#payBtn,#mobileMenu a');
   if (!t) return;
   const a = t.dataset.action;
   if (a === 'toggle-menu') return setMenu($('#mobileMenu').classList.contains('hidden'));
@@ -293,6 +309,7 @@ document.addEventListener('click', e => {
   if (t.dataset.inc) return cart.change(t.dataset.inc, 1);
   if (t.dataset.dec) return cart.change(t.dataset.dec, -1);
   if (t.dataset.cat) { category = t.dataset.cat; return renderShop(); }
+  if (t.id === 'payBtn') return openPay();
   if (t.id === 'checkoutBtn') {
     const rows = [...cart.items].filter(([id]) => find(id));
     if (!rows.length) return toast('Your cart is empty');
@@ -308,6 +325,58 @@ $('#bookingForm').addEventListener('submit', e => {
   const v = id => $(id).value.trim();
   window.open(wa(`Hello Nayah Allure, I'd like to book *${service.name}*.\nName: ${v('#bkName')}\nPhone: ${v('#bkPhone')}\nDate: ${v('#bkDate')}\nTime: ${v('#bkTime')}${v('#bkNotes') ? `\nNotes: ${v('#bkNotes')}` : ''}`), '_blank', 'noopener');
   e.target.reset(); closeModals();
+});
+
+/* ---------- Paystack checkout ---------- */
+const cartRows = () => [...cart.items].filter(([id]) => find(id));
+function openPay() {
+  if (!cartRows().length) return toast('Your cart is empty');
+  if (!sb) return toast('Online payment unavailable. Please order via WhatsApp.');
+  $('#payTotal').textContent = money(cart.total());
+  try { const c = JSON.parse(localStorage.getItem('nayah-customer') || '{}'); ['Name', 'Email', 'Phone'].forEach(k => { if (c[k] && !$('#pay' + k).value) $('#pay' + k).value = c[k]; }); } catch {}
+  setCart(false); $('#payModal').hidden = false; document.body.style.overflow = 'hidden'; $('#payName').focus();
+}
+async function callPaystack(body) {
+  const { data, error } = await sb.functions.invoke('paystack', { body });
+  if (error) {
+    let msg = 'Payment service error. Please try again.';
+    try { msg = (await error.context.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return data;
+}
+function paid(ref) {
+  cart.items.clear(); cart.save(); renderCart(); closeModals();
+  toast('Payment received — thank you!');
+  if (confirm(`Payment successful! Your order reference is ${ref}.
+
+Send it to us on WhatsApp to arrange delivery?`))
+    window.open(wa(`Hello Nayah Allure, I've just paid for my order. Reference: ${ref}`), '_blank', 'noopener');
+}
+$('#payForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!window.PaystackPop) return toast('Payment window failed to load. Check your connection.');
+  const btn = $('#paySubmit'), label = btn.innerHTML;
+  const customer = { name: $('#payName').value.trim(), email: $('#payEmail').value.trim(), phone: $('#payPhone').value.trim() };
+  try { localStorage.setItem('nayah-customer', JSON.stringify({ Name: customer.name, Email: customer.email, Phone: customer.phone })); } catch {}
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1" aria-hidden="true"></i> Starting payment…';
+  try {
+    const { access_code, reference } = await callPaystack({ action: 'init', customer, items: cartRows() });
+    $('#payModal').hidden = true;
+    new PaystackPop().resumeTransaction(access_code, {
+      onSuccess: async () => {
+        toast('Confirming payment…');
+        try {
+          const r = await callPaystack({ action: 'verify', reference });
+          if (r.status === 'paid') paid(reference);
+          else toast(r.status === 'pending' ? 'Payment is still processing. We will confirm shortly.' : 'Payment could not be confirmed. Please contact us.');
+        } catch (err) { toast(err.message); }
+      },
+      onCancel: () => { $('#payModal').hidden = false; toast('Payment cancelled'); },
+      onError: err => { console.error(err); $('#payModal').hidden = false; toast('Payment failed. Please try again.'); }
+    });
+  } catch (err) { toast(err.message); }
+  finally { btn.disabled = false; btn.innerHTML = label; }
 });
 
 $('#year').textContent = new Date().getFullYear();
