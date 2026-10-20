@@ -63,7 +63,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d0d0
         <div class="grid sm:grid-cols-3 gap-3 content-start">
           <label class="sm:col-span-3 text-xs text-gray-400">Item name<input id="newName" class="field mt-1" required maxlength="80" placeholder="e.g. Pearl Drop Earrings"></label>
           <label class="text-xs text-gray-400">Category<input id="newCat" class="field mt-1" required maxlength="40" list="cats" placeholder="Jewelry"></label>
-          <label class="text-xs text-gray-400">Price (KSh)<input id="newPrice" class="field mt-1" type="number" min="0" step="50" required placeholder="1500"></label>
+          <label class="text-xs text-gray-400">Price (KSh)<input id="newPrice" class="field mt-1" type="number" min="0" step="1" required placeholder="1500"></label>
           <div class="flex items-end"><button id="addBtn" class="btn w-full" type="submit"><i class="fas fa-plus mr-1" aria-hidden="true"></i> Add item</button></div>
         </div>
       </form>
@@ -173,7 +173,7 @@ function render() {
       <input class="field" data-id="${esc(p.id)}" data-f="name" maxlength="80" value="${esc(p.name)}" aria-label="Item name">
       <div class="grid grid-cols-2 gap-2">
         <input class="field" data-id="${esc(p.id)}" data-f="category" maxlength="40" value="${esc(p.category)}" list="cats" aria-label="Category">
-        <input class="field" type="number" min="0" step="50" data-id="${esc(p.id)}" data-f="price" value="${p.price}" aria-label="Price in KSh">
+        <input class="field" type="number" min="0" step="1" data-id="${esc(p.id)}" data-f="price" value="${p.price}" aria-label="Price in KSh">
       </div>
       <div class="flex justify-between items-center text-xs">
         <label class="flex items-center gap-2 text-gray-300"><input type="checkbox" data-id="${esc(p.id)}" data-f="active" ${p.active ? 'checked' : ''}> Visible on site</label>
@@ -183,7 +183,7 @@ function render() {
   $('#services').innerHTML = SERVICES.map(s => `
     <div class="bg-darkgray border border-gold/20 rounded-lg p-4 space-y-3">
       <h3 class="font-semibold text-gold">${esc(s.name)}</h3>
-      ${s.items.map(([n, def], i) => `<label class="block text-xs text-gray-400">${esc(n)}<input class="field mt-1" type="number" min="0" step="50" data-s="${s.id}" data-i="${i}" value="${Number(prices[s.id]?.[i] ?? def)}"></label>`).join('')}
+      ${s.items.map(([n, def], i) => `<label class="block text-xs text-gray-400">${esc(n)}<input class="field mt-1" type="number" min="0" step="1" data-s="${s.id}" data-i="${i}" value="${Number(prices[s.id]?.[i] ?? def)}"></label>`).join('')}
     </div>`).join('');
 }
 
